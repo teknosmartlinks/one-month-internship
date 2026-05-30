@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  frontend:
+    build: ./frontend
+    container_name: student-portal-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    container_name: student-portal-backend
+    ports:
+      - "5000:5000"
+    environment:
+      DB_HOST: db
+      DB_NAME: student_portal
+      DB_USER: portal_user
+      DB_PASSWORD: portal_pass
+    depends_on:
+      - db
+
+  db:
+    image: docker.io/library/postgres:15
+    container_name: student-portal-db
+    environment:
+      POSTGRES_DB: student_portal
+      POSTGRES_USER: portal_user
+      POSTGRES_PASSWORD: portal_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - student_portal_data:/var/lib/postgresql/data
+
+volumes:
+  student_portal_data:
