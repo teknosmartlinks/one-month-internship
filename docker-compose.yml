@@ -34,5 +34,23 @@ services:
     volumes:
       - student_portal_data:/var/lib/postgresql/data
 
+  monitoring:
+    build: ./monitoring
+    container_name: student-portal-monitoring
+    ports:
+      - "8090:8090"
+    environment:
+      DB_HOST: db
+      DB_NAME: student_portal
+      DB_USER: portal_user
+      DB_PASSWORD: portal_pass
+      PODMAN_SOCKET: /run/podman/podman.sock
+    volumes:
+      - /run/podman/podman.sock:/run/podman/podman.sock:ro
+    depends_on:
+      - frontend
+      - backend
+      - db
+
 volumes:
   student_portal_data:
