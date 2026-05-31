@@ -1,4 +1,4 @@
-const backendUrl = "http://192.168.0.14:5000";
+const backendUrl = "http://192.168.0.16:5000";
 
 let loggedInStudent = null;
 
