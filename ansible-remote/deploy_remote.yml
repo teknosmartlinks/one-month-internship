@@ -1,0 +1,112 @@
+---
+- name: Deploy Student Internship Portal to Linux Client
+  hosts: target
+  become: yes
+
+  vars:
+    app_source_dir: /root/one-month-internship/
+    app_target_dir: /root/one-month-internship/
+
+  tasks:
+
+    - name: Install the packages
+      dnf:
+        name:
+          - podman
+          - python3
+          - python3-pip
+          - rsync
+          - git
+        state: present
+
+    - name: Install podman-compose
+      pip:
+        name: podman-compose
+        executable: pip3
+
+    - name: Stop firewalld
+      service:
+        name: firewalld
+        state: stopped
+      ignore_errors: yes
+
+
+    - name: Disable firewalld
+      service: 
+        name: firewalld
+        enabled: no
+      ignore_errors: yes
+
+
+    - name: create application directory
+      file:
+        path: "{{ app_target_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copy project files
+      synchronize:
+        src: "{{ app_source_dir }}"
+        dest: "{{ app_target_dir }}"
+        delete: no
+        rsync_opts:
+          - "--exclude=.git"
+          - "--exclude=ansible-remote"
+          - "--exclude=__pycache__"
+
+    - name: Stop any existing application if it is running
+      command: podman-compose down
+      args:
+        chdir: "{{ app_target_dir }}"
+      ignore_errors: yes
+
+
+    - name: Start application
+      command: podman-compose up --build -d
+      args:
+        chdir: "{{ app_target_dir }}"
+
+    - name: Wait for frontend
+      wait_for:
+        host: localhost
+        port: 8080
+        timeout: 180
+
+
+    - name: Wait for backend
+      wait_for:
+        host: localhost
+        port: 5000
+        timeout: 180
+
+
+    - name: Wait for monitoring dashboard
+      wait_for:
+        host: localhost
+        port: 8090
+        timeout: 180
+
+    - name: Verify backend API
+      uri:
+        url: http://localhost:5000/health
+        method: GET
+        status_code: 200
+      register: backend_status
+
+    - name: verify monitoring dashboard
+      uri:
+        url: http://localhost:8090/health
+        method: GET
+        status_code: 200
+      register: monitoring_status
+
+    - name: Show deployment summary
+      debug:
+        msg:
+        - "Deployment successful"
+        - "Student Internship Portal URL:"
+        - "http://{{ ansible_host }}:8080"
+        - "Monitoring Dashboard:"
+        - "http://{{ ansible_host }}:8090"
+        - "Backend API:"
+        - "http://{{ ansible_host }}:5000/health"
